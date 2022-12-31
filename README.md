@@ -14,4 +14,13 @@ https://www.example.com/index.html
 ```
 **Output Directory**: target folder for the downloaded files. This (should) default to a folder within the current active project once an input file is selected.
 
-***
+
+
+## Current and future work
+- [ ] Finish up bulk downloader
+    - [ ] Skip Existing Files toggle
+    - [ ] Add Directory To Project toggle
+- [ ] Better plots
+- [ ] Some basic raster statistics / analysis
+    - [ ] Value histogram / plot
+- [ ] Make the toolbox's metadata and documentation work
