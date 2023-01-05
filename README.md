@@ -22,7 +22,7 @@ Need to know how two DEMs differ? Look no further! It even symbolizes the output
 **Input Rasters 1 & 2**: the rasters to compare, either a raster (or mosaic) layer or a raster on disk. If the cell sizes differ, the finer one will be downsampled to match the first and stored in the workspace
 
 
-**Output Raster** where to store the output raster.
+**Output Raster**: where to store the output raster. This is created by subtracting raster 2 from raster 1 -- positive values mean raster 1 was on top, negative values mean raster 2 was on top.
 
 
 
