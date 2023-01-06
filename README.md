@@ -30,6 +30,7 @@ Need to know how two DEMs differ? Look no further! It even symbolizes the output
 - [ ] Finish up bulk downloader
     - [ ] Skip Existing Files toggle
     - [ ] Add Directory To Project toggle
+    - [ ] Add toggle for upsample vs downsample
 - [ ] Finish up DEM difference
     - [ ] Make the downsample a temporary file to avoid clutter
     - [ ] Generate histogram and statistics table from the difference
