@@ -119,12 +119,13 @@ class BulkDownload(object):
         had_problem_urls = False
         headers = {'User-Agent': "Clay's Bulk Downloader (claystestingaddress@gmail.com)"}
         # Wikimedia commons (and probably others) won't allow requests without an identifying header
+        arcpy.SetProgressor("step", "Downloading Files", 0, total_urls, 1)
         for url in url_list:
             try:
                 current_url += 1
-                arcpy.AddMessage(datetime.now().strftime("%H:%M:%S") +
-                            " | Fetching '%s' (%d / %d)"
-                            % (url, current_url, total_urls))
+                message =  "Fetching file %d / %d" % (current_url, total_urls)
+                arcpy.SetProgressorLabel(message)
+                # arcpy.AddMessage(datetime.now().strftime("%H:%M:%S") + " | " + message)
                 download_file(url, output_directory)
             # Invalid URL
             except requests.exceptions.MissingSchema:
@@ -141,11 +142,7 @@ class BulkDownload(object):
                 arcpy.AddWarning("Could not connect")
                 add_problem_url(url)
                 had_problem_urls = True
-            # Other errors, fill in more as you see them happen
-            '''except requests.exceptions as error:
-                arcpy.AddWarning("Unaccounted error: %s" % error)
-                add_problem_url(url)
-                had_problem_urls = True'''
+            arcpy.SetProgressorPosition()
 
         # end message
         arcpy.AddMessage("Downloads complete! Check '%s' to see your files." % output_directory)
