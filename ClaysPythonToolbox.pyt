@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+
+# Clay's GIS Toolbox
+# https://github.com/aJarOfClay/ClaysGISToolbox
+
 import arcpy
 import os
 from datetime import datetime
