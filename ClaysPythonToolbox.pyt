@@ -13,8 +13,8 @@ class Toolbox(object):
         self.alias = "Clay's Python Toolbox"
 
         # List of tool classes associated with this toolbox
-        self.tools = [BulkDownload, DEMDifference]  # RasterTesting also exists, but I'm not including it here
-
+        self.tools = [BulkDownload, DEMDifference, CreateExtentPolygon]
+        
 
 class BulkDownload(object):
     def __init__(self):
@@ -184,7 +184,6 @@ class DEMDifference(object):
             direction = "Input")
 
         # Output Raster
-        # Raster 2
         param2 = arcpy.Parameter(
             displayName = "Difference Raster",
             name = "raster_out",
@@ -213,7 +212,7 @@ class DEMDifference(object):
     def execute(self, parameters, messages):
         """The source code of the tool."""
         # set up progress bar
-        arcpy.SetProgressor("step", "Downloading Files", 0, 4, 1)
+        arcpy.SetProgressor("step", "Finding Difference Between DEMs", 0, 4, 1)
 
         # extract parameters and make descriptions for each input raster
         arcpy.SetProgressorLabel("Looking at inputs")
@@ -305,3 +304,84 @@ class DEMDifference(object):
 
         return
 
+
+class CreateExtentPolygon(object):
+    def __init__(self):
+        """Define the tool (tool name is the name of the class)."""
+        self.label = "Create Extent Polygon"
+        self.description = "Create a polygon representing the extent of a raster"
+        self.canRunInBackground = True
+
+    def getParameterInfo(self):
+        """Define parameter definitions"""
+        # Input raster
+        param0 = arcpy.Parameter(
+            displayName = "Input Raster",
+            name = "raster",
+            datatype = ["GPRasterLayer", "DERasterDataset", "GPMosaicLayer", "DEMosaicDataset", "DERasterBand"],
+            parameterType = "Required",
+            direction = "Input")
+
+        # Output feature class
+        param1 = arcpy.Parameter(
+            displayName = "Feature Class",
+            name = "feature_class",
+            datatype = ["DEFeatureClass"],
+            parameterType = "Required",
+            direction = "Output")
+
+        # Identifying name for the resulting polygon
+        param2 = arcpy.Parameter(
+            displayName = "Polygon Identifier",
+            name = "polygon_name",
+            datatype = ["GPString"],
+            parameterType = "Optional",
+            direction = "Output")
+
+        # param1.filter.list = ["Polygon"]  # only allow a polygon
+
+        params = [param0, param1]
+        return params
+
+    def updateParameters(self, parameters):
+        """Modify the values and properties of parameters before internal
+        validation is performed.  This method is called whenever a parameter
+        has been changed."""
+
+        # check number of bands in the rasters provided (skip if raster band is selected)
+        # if there's more than one band, require user to select a band
+
+        return
+
+    def updateMessages(self, parameters):
+        """Modify the messages created by internal validation for each tool
+        parameter.  This method is called after internal validation."""
+        return
+
+    def execute(self, parameters, messages):
+        """The source code of the tool."""
+        arcpy.SetProgressor("step", "Generating Extent Polygon", 0, 3, 1)  # set up progress bar
+        # extract parameters and make descriptions for each input raster
+        arcpy.SetProgressorLabel("Looking at inputs")
+        input_raster = parameters[0].valueAsText
+        feature_class_location = parameters[1].valueAsText
+        arcpy.SetProgressorPosition()
+
+        arcpy.SetProgressorLabel("Executing IsNull")
+        null_raster = arcpy.sa.IsNull(input_raster)
+        arcpy.SetProgressorPosition()
+
+        arcpy.SetProgressorLabel("Executing RasterToPolygon")
+        arcpy.conversion.RasterToPolygon(
+            in_raster = null_raster,
+            out_polygon_features = feature_class_location,
+            simplify = "NO_SIMPLIFY")
+        arcpy.SetProgressorPosition()
+        
+        return
+
+    def postExecute(self, parameters):
+        """This method takes place after outputs are processed and
+        added to the display."""
+
+        return
