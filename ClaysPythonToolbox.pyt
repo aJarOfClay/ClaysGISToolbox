@@ -4,16 +4,13 @@
 # https://github.com/aJarOfClay/ClaysGISToolbox
 
 import arcpy
-import os
-import requests
-import string
-from datetime import datetime
 
 # ran into an issue during development where we need to make sure we're working the most recent version
 # many thanks to the solution found here: https://stackoverflow.com/questions/1517038/python-refresh-reload
 # set this to True when changing and testing, False for normal use and published versions
 in_development_mode = True
 if in_development_mode: from importlib import reload
+
 
 class Toolbox(object):
     def __init__(self):
@@ -24,7 +21,7 @@ class Toolbox(object):
 
         # List of tool classes associated with this toolbox
         self.tools = [BulkDownload, DEMDifference, CreateExtentPolygon]
-        
+
 
 class BulkDownload(object):
     def __init__(self):
