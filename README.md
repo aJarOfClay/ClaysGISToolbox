@@ -27,5 +27,7 @@ See [tools.md](https://github.com/aJarOfClay/ClaysGISToolbox/blob/main/tools.md)
     - [ ] Resolve IsNull() quirk
 - [ ] Make good plots
 - [ ] Make the toolbox's metadata and documentation work
-- [ ] Make usable in QGIS
 - [ ] Make usable in command line
+    - [ ] Disable adding to map & symbology when not run from an active project
+    - [ ] CL interfaces
+- [ ] Make usable in QGIS
