@@ -4,10 +4,13 @@
 # https://github.com/aJarOfClay/ClaysGISToolbox
 
 import arcpy
-import os
-from datetime import datetime
-import requests
-import string
+
+# ran into an issue during development where we need to make sure we're working the most recent version
+# many thanks to the solution found here: https://stackoverflow.com/questions/1517038/python-refresh-reload
+# set this to True when changing and testing, False for normal use and published versions
+in_development_mode = True
+if in_development_mode: from importlib import reload
+
 
 class Toolbox(object):
     def __init__(self):
@@ -18,7 +21,7 @@ class Toolbox(object):
 
         # List of tool classes associated with this toolbox
         self.tools = [BulkDownload, DEMDifference, CreateExtentPolygon]
-        
+
 
 class BulkDownload(object):
     def __init__(self):
@@ -69,89 +72,9 @@ class BulkDownload(object):
         input_list = parameters[0].valueAsText
         output_directory = parameters[1].valueAsText
 
-        # creating target directory if needed
-        try:
-            os.mkdir(output_directory)
-            arcpy.AddMessage("Created new directory " + output_directory)
-        except OSError:
-            arcpy.AddMessage("Using existing directory " + output_directory)
-
-        # make a list of URLs to look at
-        url_list = []
-        with open(input_list,'r',encoding='utf8') as f:
-            url_list = f.readlines()  # crack apart entries
-        for i in range(len(url_list)):
-            url_list[i] = url_list[i].replace('\n', '')  # strip off newlines
-        url_list = [i for i in url_list if i]  # strip out blank entries
-
-
-        # function for downloading each file
-        def download_file(file_url, target_folder):
-
-            r = requests.get(file_url, headers=headers)  # create HTTP response object
-            file_name = get_filename(file_url)
-            # send an HTTP request to the server and save the HTTP response in a response object called r
-            with open(os.path.join(target_folder, file_name), 'wb') as f:
-                # write the contents of the response (r.content) to a new file in binary mode.
-                f.write(r.content)
-            return 0
-
-        # make a "problem links" list in the output if needed
-        problem_url_list = os.path.join(output_directory, datetime.now().strftime('ProblemURLs_%Y-%m-%d_%H-%M-%S.txt'))
-        def add_problem_url(problem_url):
-            f = open(problem_url_list, "a")
-            f.write(problem_url + "\n")
-            f.close()
-
-        def get_filename(file_url):
-            i = len(file_url) - 1
-            first_letter = 0
-            while i >= 0:
-                if file_url[i] == "/":
-                    first_letter = i + 1
-                    break
-                else:
-                    i -= 1
-            temp_filename = file_url[first_letter:]
-            valid_chars = "-_.() %s%s" % (string.ascii_letters, string.digits)
-            true_filename = ''.join(c for c in temp_filename if c in valid_chars)
-            return true_filename
-
-        # download each file
-        current_url = 0
-        total_urls = len(url_list)
-        had_problem_urls = False
-        headers = {'User-Agent': "Clay's Bulk Downloader (claystestingaddress@gmail.com)"}
-        # Wikimedia commons (and probably others) won't allow requests without an identifying header
-        arcpy.SetProgressor("step", "Downloading Files", 0, total_urls, 1)
-        for url in url_list:
-            try:
-                current_url += 1
-                message =  "Fetching file %d / %d" % (current_url, total_urls)
-                arcpy.SetProgressorLabel(message)
-                # arcpy.AddMessage(datetime.now().strftime("%H:%M:%S") + " | " + message)
-                download_file(url, output_directory)
-            # Invalid URL
-            except requests.exceptions.MissingSchema:
-                arcpy.AddWarning("Invalid URL")
-                add_problem_url(url)
-                had_problem_urls = True
-            except requests.exceptions.InvalidSchema:
-                arcpy.AddWarning("Invalid URL")
-                add_problem_url(url)
-                had_problem_urls = True
-            # Trouble connecting
-            except requests.exceptions.ConnectionError or socket.gaierror \
-                   or urllib3.exceptions.NewConnectionError or urllib3.exceptions.MaxRetryError:
-                arcpy.AddWarning("Could not connect")
-                add_problem_url(url)
-                had_problem_urls = True
-            arcpy.SetProgressorPosition()
-
-        # end message
-        arcpy.AddMessage("Downloads complete! Check '%s' to see your files." % output_directory)
-        if had_problem_urls:
-            arcpy.AddWarning("File created at '%s' with a list of problem urls" % problem_url_list)
+        import BulkDownload
+        if in_development_mode: reload(BulkDownload)
+        BulkDownload.download(input_list, output_directory)
 
         return
 
@@ -215,90 +138,13 @@ class DEMDifference(object):
 
     def execute(self, parameters, messages):
         """The source code of the tool."""
-        # set up progress bar
-        arcpy.SetProgressor("step", "Finding Difference Between DEMs", 0, 4, 1)
-
-        # extract parameters and make descriptions for each input raster
-        arcpy.SetProgressorLabel("Looking at inputs")
         input_raster_1 = parameters[0].valueAsText
         input_raster_2 = parameters[1].valueAsText
         output_raster_location = parameters[2].valueAsText
-        input_raster_1_desc = arcpy.Describe(input_raster_1)
-        input_raster_2_desc = arcpy.Describe(input_raster_2)
-        # output raster description is generated later when the raster actually exists
-        arcpy.SetProgressorPosition()
 
-        # todo: need to only allow a single raster band through
-
-        # downsample and snap finer raster to match coarser raster
-        input_raster_1_cellSize = input_raster_1_desc.meanCellWidth
-        input_raster_2_cellSize = input_raster_2_desc.meanCellWidth
-        if input_raster_1_cellSize < input_raster_2_cellSize:  # if input 1 is finer, downsample to match input 2
-            arcpy.SetProgressorLabel("Downsampling %s" % input_raster_1_desc.baseName)
-            raster_2 = input_raster_2
-            raster_1 = input_raster_1_desc.baseName + "_downsample"
-            arcpy.AddMessage("Downsampling %s as %s to match %s" % (input_raster_1, raster_1, input_raster_2))
-            arcpy.env.snapRaster = raster_2
-            arcpy.Resample_management(
-                in_raster = input_raster_1,
-                out_raster = raster_1,
-                cell_size = input_raster_2_cellSize,
-                resampling_type = "BILINEAR")
-        elif input_raster_1_cellSize > input_raster_2_cellSize:  # if input 2 is finer, downsample to match input 1
-            arcpy.SetProgressorLabel("Downsampling %s" % input_raster_2_desc.baseName)
-            raster_1 = input_raster_1
-            raster_2 = input_raster_2_desc.baseName + "_downsample"
-            arcpy.AddMessage("Downsampling %s as %s to match %s" % (input_raster_2, raster_2, input_raster_1))
-            arcpy.env.snapRaster = raster_1
-            arcpy.Resample_management(
-                in_raster = input_raster_2,
-                out_raster = raster_2,
-                cell_size = input_raster_1_cellSize,
-                resampling_type = "BILINEAR")
-        else:  # rasters are the same size - don't change them, just snap to raster 1
-            arcpy.SetProgressorLabel("Rasters appear to match, not downsampling")
-            arcpy.AddMessage("Rasters have the same pixel size, snapping to %s" % input_raster_1)
-            raster_1 = input_raster_1
-            raster_2 = input_raster_2
-            arcpy.env.snapRaster = raster_1
-        arcpy.SetProgressorPosition()
-
-        # generate difference raster -- positive means first is on top, negative means second is on top
-        # algebra operations already excludes areas without overlap, so no need to worry about it
-        arcpy.SetProgressorLabel("Subtracting rasters")
-        arcpy.AddMessage("Subtracting rasters")
-        difference_raster = arcpy.Raster(raster_1) - arcpy.Raster(raster_2)
-        difference_raster.save(output_raster_location)
-        output_raster_object = arcpy.Raster(output_raster_location)
-        arcpy.SetProgressorPosition()
-
-        # create and update layer in current map
-        arcpy.SetProgressorLabel("Adding and symbolizing raster layer")
-        p = arcpy.mp.ArcGISProject("current")
-        m = p.activeMap
-        m.addDataFromPath(output_raster_object.catalogPath)  # add the data as a new layer
-        l = m.listLayers(output_raster_object.name)[0]
-        sym = l.symbology  # start symbolizing
-        sym.updateColorizer('RasterStretchColorizer')
-        sym.colorizer.classificationField = 'Value'
-        sym.colorizer.stretchType = 'PercentClip'
-        sym.colorizer.minPercent = 1.0
-        sym.colorizer.maxPercent = 1.0
-        sym.colorizer.colorRamp = p.listColorRamps("Orange-Purple (Continuous)")[0]
-        # some conditions for labeling based on min/max value
-        min_difference = arcpy.Raster(output_raster_location).minimum
-        max_difference = arcpy.Raster(output_raster_location).maximum
-        if min_difference >= 0:  # raster 1 is always on top
-            sym.colorizer.maxLabel = input_raster_1_desc.baseName + " on top by " + str(round(max_difference, 4))
-            sym.colorizer.minLabel = input_raster_1_desc.baseName + " on top by " + str(round(min_difference, 4))
-        elif (max_difference < 0):  # raster 2 is always on top
-            sym.colorizer.maxLabel = input_raster_2_desc.baseName + " on top by " + str(round(max_difference * -1, 4))
-            sym.colorizer.minLabel = input_raster_2_desc.baseName + " on top by " + str(round(min_difference * -1, 4))
-        else:  # rasters go back and forth
-            sym.colorizer.maxLabel = input_raster_1_desc.baseName + " on top by " + str(round(max_difference, 4))
-            sym.colorizer.minLabel = input_raster_2_desc.baseName + " on top by " + str(round(min_difference * -1, 4))
-        l.symbology = sym
-        arcpy.SetProgressorPosition()
+        import DEMDifference
+        if in_development_mode: reload(DEMDifference)
+        DEMDifference.difference(input_raster_1, input_raster_2, output_raster_location)
 
         return
 
@@ -364,23 +210,12 @@ class CreateExtentPolygon(object):
 
     def execute(self, parameters, messages):
         """The source code of the tool."""
-        arcpy.SetProgressor("step", "Generating Extent Polygon", 0, 3, 1)  # set up progress bar
-        # extract parameters and make descriptions for each input raster
-        arcpy.SetProgressorLabel("Looking at inputs")
         input_raster = parameters[0].valueAsText
         feature_class_location = parameters[1].valueAsText
-        arcpy.SetProgressorPosition()
 
-        arcpy.SetProgressorLabel("Executing IsNull")
-        null_raster = arcpy.sa.IsNull(input_raster)
-        arcpy.SetProgressorPosition()
-
-        arcpy.SetProgressorLabel("Executing RasterToPolygon")
-        arcpy.conversion.RasterToPolygon(
-            in_raster = null_raster,
-            out_polygon_features = feature_class_location,
-            simplify = "NO_SIMPLIFY")
-        arcpy.SetProgressorPosition()
+        import CreateExtentPolygon
+        if in_development_mode: reload(CreateExtentPolygon)
+        CreateExtentPolygon.MakePolygon(input_raster, feature_class_location)
         
         return
 
