@@ -10,6 +10,7 @@ https://www.example.com/index.html
 ```
 **Output Directory**: target folder for the downloaded files. This (should) default to a folder within the current active project once an input file is selected.
 
+Known issue: when an existing folder is selected, the folder and everything inside is obliterated
 
 ## Difference Between DEMs
 Need to know how two DEMs differ? Look no further! It even symbolizes the output for you!
