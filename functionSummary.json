@@ -1,0 +1,32 @@
+{ "functions": [
+  {
+    "fullname": "BulkDownload.download()",
+    "shortname": "Bulk Downloader",
+    "blurb": "Download a bunch of files at once.",
+    "longdesc": "Takes a provided URLs, retrieves the webpage, and deposits the content into a new directory",
+    "parameters": [
+      {"name": "Input List", "desc": "File on disk containing desired URLs formatted as a line-separated .txt"},
+      {"name": "Download Directory", "desc": "Destination folder for the downloads. Be sure nothing important is stored there, as it may be erased."}
+    ]
+  },{
+    "fullname": "CreateExtentPolygon.MakePolygon()",
+    "shortname": "Create Extent Polygon",
+    "blurb": "Show the extent of a raster without loading it.",
+    "longdesc": "Generates a polygon representing the extent of a provided raster",
+    "parameters": [
+      {"name": "Input Raster", "desc": "The raster you're interested in"},
+      {"name": "Output Feature Class", "desc": "A new polygon feature class to be created"},
+      {"name": "Polygon Name", "desc": "Optional, you can name the polygon to identify it later"}
+    ]
+  },{
+    "fullname": "DEMDifference.difference()",
+    "shortname": "DEM Difference",
+    "blurb": "Highlight the height difference between DEMs.",
+    "longdesc": "Subtracts one DEM raster from another to show the height difference at each cell. If the rasters don't fully overlay fully, the result only covers the overlap. Accounts for cell size differences by downsampling the raster with the smaller cells. Cannot account for differences in geographic projection or elevation units.",
+    "parameters": [
+      {"name": "First Raster", "desc": "The first DEM to compare"},
+      {"name": "Second Raster", "desc": "The second DEM to compare, this will be subtracted from the first."},
+      {"name": "Difference Raster", "desc": "The resulting raster. Positive values represent where the first raster has a greater value."}
+    ]
+  }
+]}
