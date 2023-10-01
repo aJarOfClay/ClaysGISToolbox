@@ -20,7 +20,7 @@ class Toolbox(object):
         self.alias = "Clay's Python Toolbox"
 
         # List of tool classes associated with this toolbox
-        self.tools = [BulkDownload, DEMDifference, CreateExtentPolygon]
+        self.tools = [BulkDownload, DEMDifference, CreateExtentPolygon, ViewVerticalSlice]
 
 
 class BulkDownload(object):
@@ -198,9 +198,6 @@ class CreateExtentPolygon(object):
         validation is performed.  This method is called whenever a parameter
         has been changed."""
 
-        # check number of bands in the rasters provided (skip if raster band is selected)
-        # if there's more than one band, require user to select a band
-
         return
 
     def updateMessages(self, parameters):
@@ -216,6 +213,71 @@ class CreateExtentPolygon(object):
         import CreateExtentPolygon
         if in_development_mode: reload(CreateExtentPolygon)
         CreateExtentPolygon.MakePolygon(input_raster, feature_class_location)
+        
+        return
+
+    def postExecute(self, parameters):
+        """This method takes place after outputs are processed and
+        added to the display."""
+
+        return
+
+
+class ViewVerticalSlice(object):
+    def __init__(self):
+        """Define the tool (tool name is the name of the class)."""
+        self.label = "View Vertical Slice"
+        self.description = "Create a plot representing the height of one or more DEMs"
+        self.canRunInBackground = True
+
+    def getParameterInfo(self):
+        """Define parameter definitions"""
+        # Input rasters
+        param0 = arcpy.Parameter(
+            displayName = "Input DEMs",
+            name = "rasters",
+            datatype = ["GPRasterLayer", "DERasterDataset", "GPMosaicLayer", "DEMosaicDataset", "DERasterBand"],
+            parameterType = "Required",
+            direction = "Input",
+            multiValue = True)
+
+        # Line to follow
+        param1 = arcpy.Parameter(
+            displayName = "Line to slice through",
+            name = "line",
+            datatype = ["DEFeatureClass", "GPFeatureLayer"],
+            parameterType = "Required",
+            direction = "Input")
+
+        # param1.filter.list = ["Line"]  # only allow a line
+
+        params = [param0, param1]
+        return params
+
+    def updateParameters(self, parameters):
+        """Modify the values and properties of parameters before internal
+        validation is performed.  This method is called whenever a parameter
+        has been changed."""
+        
+        return
+
+    def updateMessages(self, parameters):
+        """Modify the messages created by internal validation for each tool
+        parameter.  This method is called after internal validation."""
+        return
+
+    def execute(self, parameters, messages):
+        """The source code of the tool."""
+        input_rasters = parameters[0].valueAsText
+        raster_list = input_rasters.split(";")
+        line = parameters[1].valueAsText
+
+        arcpy.AddMessage("Recieved Data: ")
+        arcpy.AddMessage(raster_list)
+        
+        # import ViewVerticalSlice
+        # if in_development_mode: reload(ViewVerticalSlice)
+        # ViewVerticalSlice.MakePlot(input_rasters, line)
         
         return
 

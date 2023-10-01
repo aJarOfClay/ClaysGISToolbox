@@ -14,24 +14,4 @@ I plan to make this also work for QGIS and command-line in the future
 See [tools.md](https://github.com/aJarOfClay/ClaysGISToolbox/blob/main/tools.md) for how each one is used
 
 ## Current and future work
-- [ ] Finish up bulk downloader
-    - [ ] Skip Existing Files toggle
-    - [ ] Add Directory To Project toggle
-- [ ] Finish up DEM difference
-    - [ ] Make the downsample a temporary file to avoid clutter
-    - [ ] Add toggle for upsample vs downsample
-    - [ ] Generate histogram and statistics table from the difference
-    - [ ] Test edge cases
-    - [ ] Function to show each elevation and difference along a provided line
-    - [ ] Function to create a local scene for comparing the rasters directly
-- [ ] Finish up extent polygon
-    - [ ] Allow appending to an existing feature class
-    - [ ] Add identifying names to output polygons
-    - [ ] Resolve IsNull() quirk - maybe find a way to not rely on spatial analyst
-- [ ] Make good plots
-- [ ] Make the toolbox's metadata and documentation work
-- [ ] Make usable in command line
-    - [ ] Disable adding to map & symbology when not run from an active project
-    - [ ] Switch for whether to use print() or arcpy.AddMessage() for progress updates
-    - [ ] CL interfaces
-- [ ] Make usable in QGIS
+See [todo.md](https://github.com/aJarOfClay/ClaysGISToolbox/blob/main/todo.md)
