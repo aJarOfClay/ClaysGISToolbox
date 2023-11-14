@@ -12,15 +12,20 @@ in_development_mode = True
 if in_development_mode: from importlib import reload
 
 
+def print_parameters(parameters):
+    for idx, parameter in enumerate(parameters):
+        arcpy.AddMessage("parameter %i: %s".format(idx, parameter.valueAsText))
+
+
 class Toolbox(object):
     def __init__(self):
         """Define the toolbox (the name of the toolbox is the name of the
         .pyt file)."""
-        self.label = "Toolbox"
-        self.alias = "Clay's Python Toolbox"
+        self.label = "Clay's Python Toolbox"
+        self.alias = "ClaysPythonToolbox"
 
         # List of tool classes associated with this toolbox
-        self.tools = [BulkDownload, DEMDifference, CreateExtentPolygon, ViewVerticalSlice]
+        self.tools = [BulkDownload, DEMDifference, CreateExtentPolygon, ExportTableByLabel, MakeProfiles]
 
 
 class BulkDownload(object):
@@ -223,42 +228,57 @@ class CreateExtentPolygon(object):
         return
 
 
-class ViewVerticalSlice(object):
+class ExportTableByLabel(object):
     def __init__(self):
         """Define the tool (tool name is the name of the class)."""
-        self.label = "View Vertical Slice"
-        self.description = "Create a plot representing the height of one or more DEMs"
+        self.label = "Export Table By Label"
+        self.description = "Exports separate tables from a single source based on unique values in a field"
         self.canRunInBackground = True
 
     def getParameterInfo(self):
         """Define parameter definitions"""
-        # Input rasters
-        param0 = arcpy.Parameter(
-            displayName = "Input DEMs",
-            name = "rasters",
-            datatype = ["GPRasterLayer", "DERasterDataset", "GPMosaicLayer", "DEMosaicDataset", "DERasterBand"],
-            parameterType = "Required",
-            direction = "Input",
-            multiValue = True)
 
-        # Line to follow
-        param1 = arcpy.Parameter(
-            displayName = "Line to slice through",
-            name = "line",
-            datatype = ["DEFeatureClass", "GPFeatureLayer"],
-            parameterType = "Required",
-            direction = "Input")
+        inTable = arcpy.Parameter(
+            displayName="Input Table",
+            name="table_in",
+            datatype=["DETable", "DEFeatureClass", "GPTableView"],
+            parameterType="Required",
+            direction="Input")
 
-        # param1.filter.list = ["Line"]  # only allow a line
+        labelField = arcpy.Parameter(
+            displayName="Label Field",
+            name="field",
+            datatype="Field",
+            parameterType="Required",
+            direction="Input")
+        labelField.parameterDependencies = [inTable.name]
 
-        params = [param0, param1]
+#         FieldsToInclude = arcpy.Parameter(
+#             displayName="Fields to Include (do not include OBJECTID, SHAPE, or duplicates)",
+#             name="included_fields",
+#             datatype="Field",
+#             parameterType="Required",
+#             direction="Input",
+#             multiValue=True)
+#         FieldsToInclude.parameterDependencies = [inTable.name]
+
+        excelOut = arcpy.Parameter(
+            displayName="Output Excel File",
+            name="xlsx_out",
+            datatype="DEFile",
+            parameterType="Required",
+            direction="Output")
+
+        excelOut.filter.list = ['xlsx'] # only allow an excel
+
+        params = [inTable, labelField, excelOut]
         return params
 
     def updateParameters(self, parameters):
         """Modify the values and properties of parameters before internal
         validation is performed.  This method is called whenever a parameter
         has been changed."""
-        
+
         return
 
     def updateMessages(self, parameters):
@@ -268,17 +288,19 @@ class ViewVerticalSlice(object):
 
     def execute(self, parameters, messages):
         """The source code of the tool."""
-        input_rasters = parameters[0].valueAsText
-        raster_list = input_rasters.split(";")
-        line = parameters[1].valueAsText
+        feature_class_in = parameters[0].valueAsText
+        field_in = parameters[1].valueAsText
+#         included_fields = parameters[2].valueAsText.split(';')
+        file_out =  parameters[2].valueAsText
 
-        arcpy.AddMessage("Recieved Data: ")
-        arcpy.AddMessage(raster_list)
-        
-        # import ViewVerticalSlice
-        # if in_development_mode: reload(ViewVerticalSlice)
-        # ViewVerticalSlice.MakePlot(input_rasters, line)
-        
+        import ExportTableByLabel
+        if in_development_mode: reload(ExportTableByLabel)
+        ExportTableByLabel.do_everything_to_excel(
+            input_table=feature_class_in,
+            label_field=field_in,
+#             wanted_fields=included_fields,
+            output_filename=file_out)
+
         return
 
     def postExecute(self, parameters):
@@ -286,3 +308,156 @@ class ViewVerticalSlice(object):
         added to the display."""
 
         return
+
+
+class MakeProfiles(object):
+    def __init__(self):
+        """Define the tool (tool name is the name of the class)."""
+        self.label = "Make Profiles"
+        self.description = "Takes line features and makes profiles along rasters"
+        self.canRunInBackground = True
+
+    def getParameterInfo(self):
+        """Define parameter definitions"""
+        # lines_in: line feature class
+        # label_field: field from lines
+        # rasters_in: Extract Values type
+        # density_type: percentage or distance
+        # density: float
+        # xlsx_out: Excel doc file
+
+        lines_in = arcpy.Parameter(
+            displayName="Line Feature Class",
+            name="lines_in",
+            datatype="DEFeatureClass",
+            parameterType="Required",
+            direction="Input",
+            category="Input Data")
+        lines_in.filter.list = ["Polyline"]
+        # todo: figure out how to allow GPFeatureLayer with filter
+
+        label_field = arcpy.Parameter(
+            displayName="Label Field",
+            name="label_field",
+            datatype="Field",
+            parameterType="Required",
+            direction="Input",
+            category="Input Data")
+        label_field.parameterDependencies = [lines_in.name]
+
+        rasters_in = arcpy.Parameter(
+            displayName="Value Rasters",
+            name="rasters_in",
+            datatype= ["DERasterBand","DERasterDataset", "GPRasterLayer", "DEMosaicDataset", "GPMosaicLayer"],
+            # "GPSAExtractValues"? maybe just name fields after rasters
+            parameterType="Required",
+            direction="Input",
+            multiValue=True,
+            category="Input Data")
+
+        density_type = arcpy.Parameter(
+            displayName="Sample Density Type",
+            name="density_type",
+            datatype="GPString",
+            parameterType="Required",
+            direction="Input",
+            category="Sampling")
+        density_type.filter.type = "ValueList"
+        density_type.filter.list = ["PERCENTAGE", "DISTANCE"]
+
+        percent_density = arcpy.Parameter(
+            displayName="Percent Density Value",
+            name="percent_density",
+            datatype="GPDouble",
+            parameterType="Optional",
+            direction="Input",
+            category="Sampling")
+
+        distance_density = arcpy.Parameter(
+            displayName="Distance Density Value",
+            name="distance_density",
+            datatype="GPLinearUnit",
+            parameterType="Optional",
+            direction="Input",
+            category="Sampling")
+
+        interpolate = arcpy.Parameter(
+            displayName="Interpolate Raster Values",
+            name="interpolate",
+            datatype="GPBoolean",
+            parameterType="Optional",
+            direction="Input",
+            category="Sampling")
+        interpolate.defaultEnvironmentName = False
+
+        xlsx_out = arcpy.Parameter(
+            displayName="Output Excel File",
+            name="xlsx_out",
+            datatype="DEFile",
+            parameterType="Required",
+            direction="Output",
+            category="Output")
+        xlsx_out.filter.list = ['xlsx'] # only allow an Excel
+
+        params = [lines_in, label_field, rasters_in, density_type, percent_density, distance_density, interpolate, xlsx_out]
+#         params = [lines_in]
+        return params
+
+    def updateParameters(self, parameters):
+        """Modify the values and properties of parameters before internal
+        validation is performed.  This method is called whenever a parameter
+        has been changed."""
+        if parameters[3] == "PERCENTAGE":
+            parameters[4].parameterType = 'Required'
+            parameters[5].parameterType = 'Optional'
+        elif parameters[3] == "DISTANCE":
+            parameters[4].parameterType = 'Optional'
+            parameters[5].parameterType = 'Required'
+        else:
+            parameters[4].parameterType = 'Optional'
+            parameters[5].parameterType = 'Optional'
+        # TODO: weird issue where once a parameter disappears it can never come back
+        # try looking at this to see if it helps https://gis.stackexchange.com/questions/116663/changing-parameter-type-from-optional-to-required-in-python-toolbox
+        return
+
+    def updateMessages(self, parameters):
+        """Modify the messages created by internal validation for each tool
+        parameter.  This method is called after internal validation."""
+        return
+
+    def execute(self, parameters, messages):
+        """The source code of the tool."""
+        if in_development_mode: print_parameters(parameters)
+        import MakeProfiles
+        if in_development_mode: reload(MakeProfiles)
+
+        file_feature = parameters[0].valueAsText
+        label_field = parameters[1].valueAsText
+        rasters = parameters[2].valueAsText.split(';')
+        sample_type = parameters[3].valueAsText
+        if sample_type == 'PERCENTAGE':
+            density = parameters[4].valueAsText
+        else:
+            density = parameters[5].valueAsText
+        interpolate = parameters[6].valueAsText
+        if interpolate is None:
+            interpolate = False
+        output = parameters[7].valueAsText
+
+        MakeProfiles.make_profiles(
+            lines_in = file_feature,
+            label_field = label_field,
+            rasters_in = rasters,
+            density_type = sample_type,
+            density = density,
+            interpolate = interpolate,
+            xlsx_out = output)
+
+        return
+
+    def postExecute(self, parameters):
+        """This method takes place after outputs are processed and
+        added to the display."""
+
+        return
+
