@@ -1,6 +1,7 @@
 import arcpy
 import ExportTableByLabel
 import MakeExcelCharts
+import string
 
 def make_profiles(lines_in, label_field, rasters_in, density_type, density, interpolate, xlsx_out):
     # lines_in: line feature class
@@ -13,9 +14,12 @@ def make_profiles(lines_in, label_field, rasters_in, density_type, density, inte
     # process input
     arcpy.AddMessage("Processing Input")
     raster_mapping = []
+    valid_fieldname_chars = "%s%s_" % (string.ascii_letters, string.digits)
     for raster in rasters_in:
         desc = arcpy.Describe(raster)
-        raster_mapping.append([desc.catalogPath,desc.name])
+        field_name = ''.join(c for c in desc.name if c in valid_fieldname_chars)
+        raster_mapping.append([desc.catalogPath,field_name])
+
 
     # make table
     arcpy.AddMessage("Generating Points")
