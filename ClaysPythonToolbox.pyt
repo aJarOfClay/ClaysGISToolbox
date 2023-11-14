@@ -391,6 +391,15 @@ class MakeProfiles(object):
             category="Sampling")
         interpolate.defaultEnvironmentName = False
 
+        keep_sample_points = arcpy.Parameter(
+            displayName="Keep Sample Points",
+            name="keep_sample_points",
+            datatype="GPBoolean",
+            parameterType="Optional",
+            direction="Input",
+            category="Sampling")
+        keep_sample_points.defaultEnvironmentName = False
+
         xlsx_out = arcpy.Parameter(
             displayName="Output Excel File",
             name="xlsx_out",
@@ -400,15 +409,14 @@ class MakeProfiles(object):
             category="Output")
         xlsx_out.filter.list = ['xlsx'] # only allow an Excel
 
-        params = [lines_in, label_field, rasters_in, density_type, percent_density, distance_density, interpolate, xlsx_out]
-#         params = [lines_in]
+        params = [lines_in, label_field, rasters_in, density_type, percent_density, distance_density, interpolate, keep_sample_points, xlsx_out]
         return params
 
     def updateParameters(self, parameters):
         """Modify the values and properties of parameters before internal
         validation is performed.  This method is called whenever a parameter
         has been changed."""
-        
+
         return
 
     def updateMessages(self, parameters):
@@ -433,7 +441,10 @@ class MakeProfiles(object):
         interpolate = parameters[6].valueAsText
         if interpolate is None:
             interpolate = False
-        output = parameters[7].valueAsText
+        keep_sample_points = parameters[7].valueAsText
+        if keep_sample_points is None:
+            keep_sample_points = False
+        output = parameters[8].valueAsText
 
         MakeProfiles.make_profiles(
             lines_in = file_feature,
@@ -442,6 +453,7 @@ class MakeProfiles(object):
             density_type = sample_type,
             density = density,
             interpolate = interpolate,
+            keep_sample_points = keep_sample_points,
             xlsx_out = output)
 
         return

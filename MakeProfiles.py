@@ -3,7 +3,7 @@ import ExportTableByLabel
 import MakeExcelCharts
 import string
 
-def make_profiles(lines_in, label_field, rasters_in, density_type, density, interpolate, xlsx_out):
+def make_profiles(lines_in, label_field, rasters_in, density_type, density, interpolate, keep_sample_points, xlsx_out):
     # lines_in: line feature class
     # label_field: field from lines
     # rasters_in: Extract Values type
@@ -20,20 +20,23 @@ def make_profiles(lines_in, label_field, rasters_in, density_type, density, inte
         field_name = ''.join(c for c in desc.name if c in valid_fieldname_chars)
         raster_mapping.append([desc.catalogPath,field_name])
 
+    if keep_sample_points:
+        points_fc = "{0}_SamplePoints".format(arcpy.Describe(lines_in).catalogPath)
+    else:
+        points_fc = "in_memory/pointsAlongLines"
 
     # make table
     arcpy.AddMessage("Generating Points")
-    points_in_memory = 'in_memory/pointsAlongLines'
     if density_type == 'PERCENTAGE':
         arcpy.management.GeneratePointsAlongLines(Input_Features=lines_in,
-                                                  Output_Feature_Class=points_in_memory,
+                                                  Output_Feature_Class=points_fc,
                                                   Point_Placement=density_type,
                                                   Percentage=density,
                                                   Include_End_Points=True,
                                                   Add_Chainage_Fields=True)
     elif density_type == 'DISTANCE':
         arcpy.management.GeneratePointsAlongLines(Input_Features=lines_in,
-                                                  Output_Feature_Class=points_in_memory,
+                                                  Output_Feature_Class=points_fc,
                                                   Point_Placement=density_type,
                                                   Distance=density,
                                                   Include_End_Points=True,
@@ -42,7 +45,7 @@ def make_profiles(lines_in, label_field, rasters_in, density_type, density, inte
         arcpy.AddError("Point density doesn't work")
         return 1
     arcpy.AddMessage("Extracting Values to Points")
-    arcpy.sa.ExtractMultiValuesToPoints(in_point_features=points_in_memory,
+    arcpy.sa.ExtractMultiValuesToPoints(in_point_features=points_fc,
                                         in_rasters=raster_mapping,
                                         bilinear_interpolate_values=interpolate)
 
@@ -52,13 +55,13 @@ def make_profiles(lines_in, label_field, rasters_in, density_type, density, inte
     wanted_fields = [label_field, 'ORIG_SEQ', 'ORIG_LEN']
     for raster in raster_mapping:
         wanted_fields.append(raster[1])
-    ExportTableByLabel.labels_to_excel_sheets(input_table=points_in_memory,
+    ExportTableByLabel.labels_to_excel_sheets(input_table=points_fc,
                                               included_fields=wanted_fields,
                                               label_field=label_field,
                                               output_filename=xlsx_out)
 
     # make charts in Excel
-    label_list = ExportTableByLabel.unique_values(points_in_memory, label_field)
+    label_list = ExportTableByLabel.unique_values(points_fc, label_field)
     y_cols = []
     col_name = 'E'
     for field in wanted_fields[3:]:
