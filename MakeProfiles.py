@@ -11,8 +11,11 @@ def make_profiles(lines_in, label_field, rasters_in, density_type, density, inte
     # density: float or linear unit
     # xlsx_out: Excel doc file
 
+    arcpy.SetProgressor("step", "Making Profiles", 0, 5, 1)
+
     # process input
-    arcpy.AddMessage("Processing Input")
+    arcpy.SetProgressorLabel("Processing Input")
+    arcpy.SetProgressorPosition()
     raster_mapping = []
     valid_fieldname_chars = "%s%s_" % (string.ascii_letters, string.digits)
     for raster in rasters_in:
@@ -26,7 +29,8 @@ def make_profiles(lines_in, label_field, rasters_in, density_type, density, inte
         points_fc = "in_memory/pointsAlongLines"
 
     # make table
-    arcpy.AddMessage("Generating Points")
+    arcpy.SetProgressorLabel("Generating Points")
+    arcpy.SetProgressorPosition()
     if density_type == 'PERCENTAGE':
         arcpy.management.GeneratePointsAlongLines(Input_Features=lines_in,
                                                   Output_Feature_Class=points_fc,
@@ -44,14 +48,16 @@ def make_profiles(lines_in, label_field, rasters_in, density_type, density, inte
     else:
         arcpy.AddError("Point density doesn't work")
         return 1
-    arcpy.AddMessage("Extracting Values to Points")
+    arcpy.SetProgressorLabel("Extracting Values to Points")
+    arcpy.SetProgressorPosition()
     arcpy.sa.ExtractMultiValuesToPoints(in_point_features=points_fc,
                                         in_rasters=raster_mapping,
                                         bilinear_interpolate_values=interpolate)
 
     # export to excel
     # set wanted fields
-    arcpy.AddMessage("Exporting Table")
+    arcpy.SetProgressorLabel("Exporting Table")
+    arcpy.SetProgressorPosition()
     wanted_fields = [label_field, 'ORIG_SEQ', 'ORIG_LEN']
     for raster in raster_mapping:
         wanted_fields.append(raster[1])
@@ -61,6 +67,8 @@ def make_profiles(lines_in, label_field, rasters_in, density_type, density, inte
                                               output_filename=xlsx_out)
 
     # make charts in Excel
+    arcpy.SetProgressorLabel("Drawing Charts")
+    arcpy.SetProgressorPosition()
     label_list = ExportTableByLabel.unique_values(points_fc, label_field)
     y_cols = []
     col_name = 'E'
