@@ -14,7 +14,8 @@ if in_development_mode: from importlib import reload
 
 def print_parameters(parameters):
     for idx, parameter in enumerate(parameters):
-        arcpy.AddMessage("parameter %i: %s".format(idx, parameter.valueAsText))
+        message = "parameter {0}: {1}".format(idx, parameter.valueAsText)
+        arcpy.AddMessage(message)
 
 
 class Toolbox(object):
@@ -348,7 +349,7 @@ class MakeProfiles(object):
         rasters_in = arcpy.Parameter(
             displayName="Value Rasters",
             name="rasters_in",
-            datatype= ["DERasterBand","DERasterDataset", "GPRasterLayer", "DEMosaicDataset", "GPMosaicLayer"],
+            datatype=["DERasterBand","DERasterDataset", "GPRasterLayer", "DEMosaicDataset", "GPMosaicLayer"],
             # "GPSAExtractValues"? maybe just name fields after rasters
             parameterType="Required",
             direction="Input",
@@ -407,17 +408,7 @@ class MakeProfiles(object):
         """Modify the values and properties of parameters before internal
         validation is performed.  This method is called whenever a parameter
         has been changed."""
-        if parameters[3] == "PERCENTAGE":
-            parameters[4].parameterType = 'Required'
-            parameters[5].parameterType = 'Optional'
-        elif parameters[3] == "DISTANCE":
-            parameters[4].parameterType = 'Optional'
-            parameters[5].parameterType = 'Required'
-        else:
-            parameters[4].parameterType = 'Optional'
-            parameters[5].parameterType = 'Optional'
-        # TODO: weird issue where once a parameter disappears it can never come back
-        # try looking at this to see if it helps https://gis.stackexchange.com/questions/116663/changing-parameter-type-from-optional-to-required-in-python-toolbox
+        
         return
 
     def updateMessages(self, parameters):
